@@ -1,0 +1,238 @@
+<html>
+
+  <head>
+    <title>Orrery Engine Testing</title>
+    
+    <!-- Stylesheets -->
+    
+    <style type="text/css">
+      body {
+        font-family: "Courier New";
+        font-size: 10pt;
+      }
+      
+      p {
+        margin-bottom: -10pt;
+      }
+    </style>
+
+    <!-- Javascript -->
+    
+    <script type="text/javascript"> var $_ORRERY_NO_AUTO_INITIALIZE = true; </script>
+    <script type="text/javascript" src="Orrery.js"></script>
+    <script type="text/javascript">
+    
+      var Status;
+      var SystemInfo;
+      var Frames;
+      
+      var Client;
+      var Canvas;
+    
+      window.onload = function ()
+      {
+        // Grab the divs for output information.
+        Status = document.getElementById('Status');
+        SystemInfo = document.getElementById('SystemInfo');
+        Frames = document.getElementById('Frames');
+        
+        Status.innerHTML = 'Loading...';
+        
+        Orrery.oncomplete = function ()
+        { 
+          Status.innerHTML = 'Orrery loaded.';
+          SystemInfo.innerHTML = 'Browser: ' + Orrery.Browser.Name() + ' ' + Orrery.Browser.Version() + '<br />' +
+                                 'Rendering Engine: ' + Orrery.RenderingEngine.Name() + ' ' + Orrery.RenderingEngine.Version() + '<br /><br />' +
+                                 
+                                 'userAgent Header: ' + Orrery.Browser.UserAgentHeader;
+        
+          Client = Orrery.Client;
+          Canvas = Client.AddCanvas('Canvas');
+          
+          /*
+           * Testing code.
+           */
+          
+          new Client.Input.Action( [Orrery.Constant.Keyboard.A,     Orrery.Constant.Keyboard.PRESS],
+                                   [Orrery.Constant.Keyboard.SHIFT, Orrery.Constant.Keyboard.UNPRESS],
+                                   function () { alert('A pressed without Shift.'); }
+                                 );
+          
+          new Client.Input.Action( [Orrery.Constant.Keyboard.A,     Orrery.Constant.Keyboard.PRESS],
+                                   [Orrery.Constant.Keyboard.SHIFT, Orrery.Constant.Keyboard.PRESS],
+                                   function () { alert('A pressed with Shift.'); }
+                                 );
+          
+          /*
+           * Test drawing stuff.
+           */
+          
+          /*
+           * QuickQueue class.
+           */
+          
+          var QuickQueue = function ()
+          {
+            for(var i = 0; i < 8; i ++)
+            {
+              this.List[i] = arguments[i];
+            }
+          };
+          
+          QuickQueue.prototype = {
+          
+            List : [null, null, null, null, null, null, null, null],
+            
+            Push : function (f)
+            {
+              for(var i = this.List.length - 1; i > 0; i --)
+                this.List[i] = this.List[i - 1];
+              
+              this.List[0] = f;
+            },
+            
+            Index : function (i)
+            {
+              return this.List[i];
+            }
+            
+          };
+          
+          /*
+           * Methods.
+           */
+          
+          var RGB = function(rgb)
+          {
+            return 'rgb('+ rgb[0] +','+ rgb[1] +','+ rgb[2] +')';
+          };
+          
+          var RandomIn = function (a, b)
+          {
+            return Math.floor( (Math.random() * (b - a - 1)) + a);
+          };
+          
+          var Pinch = function(v, low, high)
+          {
+            return Math.max(low, Math.min(v, high));
+          };
+          
+          /*
+           * Drawing code.
+           */
+          
+          // Canvas transformation tests. 
+          var Context = Canvas.Context;
+          
+          // Test drawing.
+          
+          var angle = Math.PI / 360 * 24;
+          var scale = 4;
+          
+          var second_angle = 0;
+          var translate_x = 0;
+          var translate_y = 0;
+          
+          var frames = 0;
+          var FPS = 0;
+          var time = 0;
+          
+          var TargetFPS = 90;
+          
+          // Updating interval.
+          setInterval( function () {
+            angle += Math.PI / 360;
+            
+            second_angle += Math.PI / 360;
+            translate_x = Math.PI / 720;
+            translate_y = Math.PI / 720;
+          
+          }, 10);
+          
+          // Drawing algorithm.
+          var Foo = new QuickQueue( [254, 220, 186],
+                                    [220, 186, 152],
+                                    [186, 152, 118],
+                                    [152, 118, 84],
+                                    [118, 84,  50],
+                                    [84,  50,  16],
+                                    [50,  16,   0],
+                                    [16,   0,   0]
+                                    );
+          
+          setInterval( function () {
+            frames ++;
+            
+            var dx = (1 / scale) * 15 * Math.sin(translate_x);
+            var dy = (1 / scale) * 45 * Math.sin(translate_y);
+            
+            // Rotates the canvas around a point.
+            Canvas.Draw.Translate(dx, dy);
+            Canvas.Draw.Rotate(Math.PI * Math.cos(second_angle) / 180);
+            Canvas.Draw.Translate(-dx, -dy);
+            
+            // Clears the canvas, so that something new can be drawn.
+            Canvas.Draw.Clear();
+            
+            for(var i = 7; i >= 0; i --)
+            // Generates each polygon, algorithmically.
+            {
+              var Angles = [-angle / 6, angle / 5, -angle / 4, angle / 3, -angle / 2, angle, -angle * 2, angle * 3];
+              Canvas.Draw.Polygon(40, -40,  5 + i, scale * (10 + (8 * i)), Angles[i], { FillColor : RGB(Foo.Index(i)) });
+            }
+          }, Math.floor( 1000 / TargetFPS) );
+          
+          // Loop to calculate the frames per second.
+          setInterval( function () {
+            
+            // Generate FPS data.
+            FPS += frames;
+            time ++;
+            Frames.innerHTML = (Math.round( (FPS / time) * 100) / 100) + ' Average Frames Per Second<br />' +
+                               frames + ' Frames Per Last Second';
+            frames = 0;
+            
+          }, 1000);
+          
+        };
+        
+        Orrery.onload = function (event, source, data)
+        {
+          Status.innerHTML = Status.innerHTML + '<br />' + data.source + ' loaded.';
+        };
+        
+        Orrery.onfailure = function (data)
+        {
+          Status.innerHTML = data.source + ' failed to load.';
+        };
+        
+        Orrery.Initialize();
+      }
+      
+    </script>
+ 
+  </head>
+
+  <body>
+  
+    <div id="output" style="border: 1px solid #000000; height:  640px; width: 400px; margin-top: 20px; float: left; overflow: auto;">
+      <!--
+          This displays diagnostic/testing output.
+      -->
+      <div id="Status"></div><br />
+      <div id="SystemInfo"></div><br />
+      <div id="Frames"></div><br />
+      
+    </div>
+    
+    <div id="game-area" style="border: 1px solid #000000; height: 640px; width: 640px; margin-top: 20px; margin-left: 100px; float: left;">
+    
+      <canvas id="Canvas" width="640" height="640" style="position: absolute; z-index: 1;" tabindex="2">
+        Your browser does not support the canvas element. Please upgrade to a browser with HTML5 support.
+      </canvas>
+    
+    </div>
+  
+  </body>
+
+</html>
